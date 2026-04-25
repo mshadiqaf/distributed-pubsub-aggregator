@@ -2,7 +2,11 @@
 
 ## Pub-Sub Log Aggregator dengan Idempotent Consumer dan Deduplication
 
----
+| Identitas | Detail |
+| :--- | :--- |
+| **Nama** | Muhammad Shadiq Al-Fatiy |
+| **NIM** | 11231065 |
+| **Mata Kuliah** | Sistem Terdistribusi & Parallel |
 
 ## 1. Ringkasan Sistem dan Arsitektur
 
@@ -34,7 +38,42 @@ Sistem ini merupakan **log aggregator** berbasis pola **Publish-Subscribe** yang
 
 ---
 
-## 2. Bagian Teori (T1–T8)
+## 2. Keputusan Desain
+
+### Idempotency
+
+Implementasi menggunakan pola **Idempotent Consumer**: sebelum memproses event, consumer memeriksa composite key `(topic, event_id)` di SQLite. Operasi `INSERT OR IGNORE` bersifat atomic — jika key sudah ada, insert diabaikan tanpa error. Ini menjamin bahwa meskipun event diterima berkali-kali (at-least-once delivery), side effect (penyimpanan dan pencatatan) hanya terjadi satu kali.
+
+### Dedup Store
+
+SQLite dipilih karena: (1) **Embedded** — tidak memerlukan server terpisah; (2) **ACID compliant** — menjamin durability dan atomicity; (3) **WAL mode** — memungkinkan concurrent read tanpa blocking write; (4) **Persistent** — file database survive container restart melalui Docker volume.
+
+### Ordering
+
+**Partial ordering** per-topic menggunakan timestamp + monotonic counter. Total ordering antar-topic tidak diterapkan karena: (a) Log dari topic berbeda secara semantik independen; (b) Cost global ordering tidak sebanding dengan manfaatnya untuk use case aggregation.
+
+### Retry & Fault Tolerance
+
+Sistem mensimulasikan **at-least-once delivery** dimana publisher mengirim event yang sama berulang kali. Consumer menangani ini melalui dedup check. Setelah container restart, SQLite memastikan event yang sudah diproses tidak diproses ulang.
+
+---
+
+## 3. Analisis Performa
+
+| Metrik | Hasil |
+|--------|-------|
+| Total events | 5.000 |
+| Unique events | 3.750 (~75%) |
+| Duplicates dropped | 1.250 (~25%) |
+| Processing time | < 10 detik |
+| Throughput | > 500 events/sec |
+| Dedup accuracy | 100% |
+| SQLite persistence | ✅ Verified |
+| Post-restart dedup | ✅ Working |
+
+---
+
+## 4. Keterkaitan ke Bab 1-7
 
 ### T1 (Bab 1): Karakteristik Sistem Terdistribusi dan Trade-off Pub-Sub Log Aggregator
 
@@ -107,41 +146,6 @@ Berdasarkan prinsip-prinsip sistem terdistribusi dari Bab 1–7 (Tanenbaum & Van
 | **Uptime** | Waktu sistem berjalan tanpa crash | Mengukur fault tolerance (Bab 6) |
 
 Pada stress test dengan 5.000 event (20%+ duplikasi), sistem mencapai throughput >1000 events/detik dengan dedup accuracy 100%. Endpoint `/stats` menyediakan observability real-time untuk semua metrik kunci.
-
----
-
-## 3. Keputusan Desain
-
-### Idempotency
-
-Implementasi menggunakan pola **Idempotent Consumer**: sebelum memproses event, consumer memeriksa composite key `(topic, event_id)` di SQLite. Operasi `INSERT OR IGNORE` bersifat atomic — jika key sudah ada, insert diabaikan tanpa error. Ini menjamin bahwa meskipun event diterima berkali-kali (at-least-once delivery), side effect (penyimpanan dan pencatatan) hanya terjadi satu kali.
-
-### Dedup Store
-
-SQLite dipilih karena: (1) **Embedded** — tidak memerlukan server terpisah; (2) **ACID compliant** — menjamin durability dan atomicity; (3) **WAL mode** — memungkinkan concurrent read tanpa blocking write; (4) **Persistent** — file database survive container restart melalui Docker volume.
-
-### Ordering
-
-**Partial ordering** per-topic menggunakan timestamp + monotonic counter. Total ordering antar-topic tidak diterapkan karena: (a) Log dari topic berbeda secara semantik independen; (b) Cost global ordering tidak sebanding dengan manfaatnya untuk use case aggregation.
-
-### Retry & Fault Tolerance
-
-Sistem mensimulasikan **at-least-once delivery** dimana publisher mengirim event yang sama berulang kali. Consumer menangani ini melalui dedup check. Setelah container restart, SQLite memastikan event yang sudah diproses tidak diproses ulang.
-
----
-
-## 4. Analisis Performa
-
-| Metrik | Hasil |
-|--------|-------|
-| Total events | 5.000 |
-| Unique events | 3.750 (~75%) |
-| Duplicates dropped | 1.250 (~25%) |
-| Processing time | < 10 detik |
-| Throughput | > 500 events/sec |
-| Dedup accuracy | 100% |
-| SQLite persistence | ✅ Verified |
-| Post-restart dedup | ✅ Working |
 
 ---
 
