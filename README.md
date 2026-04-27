@@ -1,10 +1,19 @@
 # Pub-Sub Log Aggregator
 
+| Identitas | Detail |
+| :--- | :--- |
+| **Nama** | Muhammad Shadiq Al-Fatiy |
+| **NIM** | 11231065 |
+| **Mata Kuliah** | Sistem Terdistribusi & Parallel |
+
 > **UTS Sistem Paralel dan Terdistribusi** — Pub-Sub Log Aggregator dengan Idempotent Consumer dan Deduplication
 
 ## Video Demo
 
-> Link video demo YouTube: 
+> Link video demo YouTube:
+
+_11231065 - UTS - Pub-Sub Log Aggregator - Sistem Paralel dan Terdistribusi A_
+https://youtu.be/HzasxlvjN5Q
 
 ## Deskripsi
 
