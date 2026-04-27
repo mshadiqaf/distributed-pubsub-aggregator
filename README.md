@@ -2,6 +2,10 @@
 
 > **UTS Sistem Paralel dan Terdistribusi** — Pub-Sub Log Aggregator dengan Idempotent Consumer dan Deduplication
 
+## Video Demo
+
+> Link video demo YouTube: 
+
 ## Deskripsi
 
 Sistem log aggregator berbasis **Publish-Subscribe** yang menerima event dari publisher, memproses event melalui consumer yang bersifat **idempotent**, dan melakukan **deduplication** terhadap event duplikat. Seluruh komponen berjalan lokal di dalam container Docker.
@@ -246,7 +250,3 @@ pub-sub-log-aggregator/
 3. **At-least-once simulation**: Publisher simulator mengirim ulang event untuk mensimulasikan duplikasi.
 4. **Ordering**: Menggunakan timestamp + monotonic sequence counter. Total ordering tidak dijamin antar topics.
 5. **Tidak ada external service**: Semua berjalan lokal dalam container.
-
-## Video Demo
-
-> Link video demo YouTube: *(tambahkan link di sini)*
