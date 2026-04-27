@@ -16,14 +16,14 @@ Sistem ini merupakan **log aggregator** berbasis pola **Publish-Subscribe** yang
 
 ```
 ┌──────────────┐     ┌──────────────────┐     ┌────────────────┐     ┌──────────────────┐
-│   Publisher   │────▶│   FastAPI API     │────▶│  asyncio.Queue │────▶│   Consumer       │
-│  (HTTP POST)  │     │  POST /publish    │     │  (in-memory)   │     │  (Idempotent)    │
+│   Publisher  │────▶│   FastAPI API    │────▶│  asyncio.Queue │────▶│   Consumer       │
+│  (HTTP POST) │     │  POST /publish   │     │  (in-memory)   │     │  (Idempotent)    │
 └──────────────┘     └──────────────────┘     └────────────────┘     └────────┬─────────┘
-                                                                               │
-                                                                        ┌──────▼─────────┐
-                                                                        │  DedupStore     │
-                                                                        │  (SQLite WAL)   │
-                                                                        └────────────────┘
+                                                                              │
+                                                                      ┌──────▼─────────┐
+                                                                      │  DedupStore    │
+                                                                      │  (SQLite WAL)  │
+                                                                      └────────────────┘
 ```
 
 ### Komponen Utama
