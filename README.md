@@ -1,30 +1,32 @@
-# Pub-Sub Log Aggregator
+# Distributed Pub-Sub Log Aggregator
 
-| Identitas | Detail |
-| :--- | :--- |
-| **Nama** | Muhammad Shadiq Al-Fatiy |
-| **NIM** | 11231065 |
-| **Mata Kuliah** | Sistem Terdistribusi & Parallel |
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=flat-square&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/Framework-FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)
+![Docker](https://img.shields.io/badge/Deployment-Docker%20Compose-2496ED?style=flat-square&logo=docker&logoColor=white)
+![SQLite](https://img.shields.io/badge/Storage-aiosqlite-003B57?style=flat-square&logo=sqlite&logoColor=white)
+![Testing](https://img.shields.io/badge/Tests-pytest-0A9EDC?style=flat-square&logo=pytest&logoColor=white)
 
-> **UTS Sistem Paralel dan Terdistribusi** — Pub-Sub Log Aggregator dengan Idempotent Consumer dan Deduplication
+Sistem log aggregator berbasis pola arsitektur **Publish-Subscribe** yang menerima event dari berbagai publisher, memproses event melalui consumer yang bersifat **idempotent**, dan melakukan **deduplication** terhadap duplikasi event secara persisten.
 
-## Video Demo
+> 📺 **Video Demonstrasi**: [Tonton Demonstrasi Sistem di YouTube](https://youtu.be/HzasxlvjN5Q)
 
-> Link video demo YouTube:
+---
 
-_11231065 - UTS - Pub-Sub Log Aggregator - Sistem Paralel dan Terdistribusi A_
-https://youtu.be/HzasxlvjN5Q
+## Deskripsi Sistem
 
-## Deskripsi
+Sistem ini dirancang untuk menangani aliran event log terdistribusi dengan keandalan pemrosesan tinggi:
+- **Idempotent Consumer**: Memastikan setiap event hanya diproses satu kali meskipun terjadi pengiriman ulang (at-least-once delivery).
+- **Persistent Deduplication**: Menggunakan penyimpanan SQLite asinkron (`aiosqlite`) sehingga data identitas event tetap bertahan saat terjadi restart container.
+- **Containerized Orchestration**: Seluruh komponen dikemas rapi dalam Docker Compose, lengkap dengan simulator publisher untuk pengujian beban.
 
-Sistem log aggregator berbasis **Publish-Subscribe** yang menerima event dari publisher, memproses event melalui consumer yang bersifat **idempotent**, dan melakukan **deduplication** terhadap event duplikat. Seluruh komponen berjalan lokal di dalam container Docker.
+---
 
 ## Arsitektur
 
-```
+```text
 ┌──────────────┐     ┌──────────────────┐     ┌────────────────┐     ┌──────────────────┐
-│   Publisher   │────▶│   FastAPI API     │────▶│  asyncio.Queue │────▶│   Consumer       │
-│  (HTTP POST)  │     │  POST /publish    │     │  (in-memory)   │     │  (Idempotent)    │
+│   Publisher  │────▶│   FastAPI API    │────▶│  asyncio.Queue │────▶│   Consumer       │
+│  (HTTP POST) │     │  POST /publish   │     │  (in-memory)   │     │  (Idempotent)    │
 └──────────────┘     └──────────────────┘     └────────────────┘     └────────┬─────────┘
                                                                                │
                       ┌──────────────────┐                              ┌──────▼─────────┐
@@ -33,62 +35,68 @@ Sistem log aggregator berbasis **Publish-Subscribe** yang menerima event dari pu
                       └──────────────────┘                              └────────────────┘
 ```
 
-**Clean Architecture Layers:**
+**Lapisan Arsitektur (Clean Architecture):**
 
-| Layer | Path | Responsibility |
-|-------|------|----------------|
-| API | `src/api/` | FastAPI route handlers |
-| Service | `src/services/` | Publisher, Consumer, Stats logic |
-| Storage | `src/storage/` | SQLite dedup persistence |
-| Model | `src/models/` | Pydantic event schemas |
-| Core | `src/core/` | Configuration & constants |
+| Lapisan | Direktori | Tanggung Jawab |
+|:---|:---|:---|
+| **API** | `src/api/` | Route handlers FastAPI |
+| **Service** | `src/services/` | Logika publisher, consumer, dan kalkulasi statistik |
+| **Storage** | `src/storage/` | Persistensi deduplikasi berbasis SQLite |
+| **Model** | `src/models/` | Skema validasi event Pydantic |
+| **Core** | `src/core/` | Konfigurasi aplikasi dan konstanta |
+
+---
 
 ## Teknologi
 
-- **Python 3.11** + **FastAPI** (async/await)
-- **SQLite** via `aiosqlite` (dedup persistence)
-- **asyncio.Queue** (internal pub-sub simulation)
-- **Docker** + **Docker Compose**
-- **pytest** + **pytest-asyncio** (unit testing)
+- **Bahasa & Framework**: Python 3.11, FastAPI (async/await)
+- **Persistensi Dedup**: SQLite via `aiosqlite`
+- **Antrean Internal**: `asyncio.Queue` (simulasi pub-sub in-process)
+- **Containerization**: Docker & Docker Compose
+- **Pengujian**: pytest & pytest-asyncio
+
+---
 
 ## Cara Build & Run
 
-### 1. Docker (Recommended)
+### 1. Docker (Rekomendasi)
 
 ```bash
 # Build image
 docker build -t uts-aggregator .
 
-# Run container
+# Jalankan container
 docker run -p 8080:8080 uts-aggregator
 ```
 
-### 2. Docker Compose (dengan Publisher Simulator)
+### 2. Docker Compose (Dengan Publisher Simulator)
 
 ```bash
-# Build dan run semua services
+# Build dan jalankan seluruh service
 docker compose up --build
 
-# Publisher simulator akan otomatis mengirim 5000 event dengan 25% duplikasi
+# Publisher simulator otomatis mengirim 5000 event dengan 25% duplikasi buatan
 ```
 
-### 3. Lokal (Development)
+### 3. Eksekusi Lokal (Development)
 
 ```bash
-# Install dependencies
+# Pasang dependensi
 pip install -r requirements.txt
 
-# Run server
+# Jalankan server
 python -m src.main
 ```
 
-## API Endpoints
+---
 
-### `POST /publish` — Publish Events
+## Dokumentasi API Endpoints
 
-Menerima single event atau batch events.
+### `POST /publish`: Menerbitkan Event
 
-**Single Event:**
+Mendukung penerimaan single event maupun batch events.
+
+**Contoh Single Event:**
 ```bash
 curl -X POST http://localhost:8080/publish \
   -H "Content-Type: application/json" \
@@ -103,56 +111,32 @@ curl -X POST http://localhost:8080/publish \
   }'
 ```
 
-**Batch Events:**
-```bash
-curl -X POST http://localhost:8080/publish \
-  -H "Content-Type: application/json" \
-  -d '{
-    "events": [
-      {
-        "topic": "auth.login",
-        "event_id": "evt-001",
-        "timestamp": "2026-01-15T10:30:00Z",
-        "source": "auth-service",
-        "payload": {"user_id": "u123"}
-      },
-      {
-        "topic": "payment.processed",
-        "event_id": "pay-001",
-        "timestamp": "2026-01-15T10:31:00Z",
-        "source": "payment-gateway",
-        "payload": {"amount": 99.99}
-      }
-    ]
-  }'
-```
-
 **Response (202 Accepted):**
 ```json
 {
   "status": "accepted",
-  "received": 2,
-  "message": "Batch of 2 events accepted"
+  "received": 1,
+  "message": "Event accepted"
 }
 ```
 
-### `GET /events?topic=...` — Get Processed Events
+### `GET /events?topic=...`: Mengambil Event yang Telah Diproses
 
 ```bash
-# Semua events
+# Mengambil seluruh event
 curl http://localhost:8080/events
 
-# Filter by topic
+# Filter berdasarkan topik tertentu
 curl "http://localhost:8080/events?topic=auth.login"
 ```
 
-### `GET /stats` — System Statistics
+### `GET /stats`: Statistik Sistem Realtime
 
 ```bash
 curl http://localhost:8080/stats
 ```
 
-**Response:**
+**Contoh Response:**
 ```json
 {
   "received": 5000,
@@ -164,98 +148,52 @@ curl http://localhost:8080/stats
 }
 ```
 
-### `GET /health` — Health Check
+### `GET /health`: Health Check Endpoint
 
 ```bash
 curl http://localhost:8080/health
 ```
 
-## Demo: Deduplication & Idempotency
+---
+
+## Pengujian Otomatis (Testing)
 
 ```bash
-# 1. Kirim event pertama kali
-curl -X POST http://localhost:8080/publish \
-  -H "Content-Type: application/json" \
-  -d '{"events":{"topic":"demo","event_id":"d1","timestamp":"2026-01-01T00:00:00Z","source":"test","payload":{}}}'
-
-# 2. Kirim event yang SAMA (duplicate)
-curl -X POST http://localhost:8080/publish \
-  -H "Content-Type: application/json" \
-  -d '{"events":{"topic":"demo","event_id":"d1","timestamp":"2026-01-01T00:00:00Z","source":"test","payload":{}}}'
-
-# 3. Cek stats — harus 2 received, 1 unique, 1 duplicate
-curl http://localhost:8080/stats
-
-# 4. Restart container lalu kirim event yang sama lagi
-docker restart <container_id>
-curl -X POST http://localhost:8080/publish \
-  -H "Content-Type: application/json" \
-  -d '{"events":{"topic":"demo","event_id":"d1","timestamp":"2026-01-01T00:00:00Z","source":"test","payload":{}}}'
-
-# 5. Cek stats — duplicate_dropped harus bertambah (persistence works!)
-curl http://localhost:8080/stats
-```
-
-## Running Tests
-
-```bash
-# Install dependencies
+# Pasang dependensi pengujian
 pip install -r requirements.txt
 
-# Run all 10 tests
+# Jalankan seluruh unit test suite
 pytest tests/ -v
 
-# Run with coverage
+# Jalankan dengan laporan ringkas
 pytest tests/ -v --tb=short
 ```
 
-## Struktur Folder
+---
 
-```
-pub-sub-log-aggregator/
-├── BRIEF.md                    # Brief tugas UTS
-├── README.md                   # Dokumentasi ini
-├── report.md                   # Laporan desain & teori (Bab 1-7)
-├── requirements.txt            # Python dependencies
-├── pyproject.toml              # Pytest configuration
-├── Dockerfile                  # Docker image definition
-├── docker-compose.yml          # Multi-service orchestration
-├── .gitignore
+## Struktur Direktori Proyek
+
+```text
+distributed-pubsub-aggregator/
+├── Dockerfile                  # Definisi container image
+├── docker-compose.yml          # Orkestrasi multi-service
+├── pyproject.toml              # Konfigurasi pengujian pytest
+├── requirements.txt            # Dependensi Python
 ├── src/
-│   ├── __init__.py
-│   ├── main.py                 # FastAPI app entry point
-│   ├── simulator.py            # Publisher stress test simulator
-│   ├── core/
-│   │   ├── __init__.py
-│   │   └── config.py           # Application configuration
-│   ├── models/
-│   │   ├── __init__.py
-│   │   └── event.py            # Pydantic event schemas
-│   ├── storage/
-│   │   ├── __init__.py
-│   │   └── dedup_store.py      # SQLite dedup persistence
+│   ├── main.py                 # Titik masuk utama aplikasi FastAPI
+│   ├── simulator.py            # Simulator generator event dan stress test
+│   ├── api/routes.py           # Endpoint router HTTP
+│   ├── core/config.py          # Konfigurasi sistem
+│   ├── models/event.py         # Skema data model Pydantic
 │   ├── services/
-│   │   ├── __init__.py
+│   │   ├── consumer.py         # Idempotent consumer worker
 │   │   ├── publisher.py        # Publisher service
-│   │   ├── consumer.py         # Idempotent consumer service
-│   │   └── stats.py            # Statistics tracking
-│   └── api/
-│       ├── __init__.py
-│       └── routes.py           # FastAPI route handlers
-└── tests/
-    ├── __init__.py
-    ├── conftest.py             # Shared test fixtures
-    ├── test_dedup_store.py     # Tests 1-3: Dedup & persistence
-    ├── test_models.py          # Test 4: Schema validation
-    ├── test_api.py             # Tests 5-8: Endpoints & stress
-    ├── test_consumer.py        # Test 9: Queue processing
-    └── test_edge_cases.py      # Test 10: Edge cases
+│   │   └── stats.py            # Kalkulator metrik dan statistik
+│   └── storage/dedup_store.py  # Penyimpanan state deduplikasi SQLite
+└── tests/                      # Rangkaian pengujian unit dan edge case
 ```
 
-## Asumsi & Catatan
+---
 
-1. **Internal queue only**: Komunikasi pub-sub menggunakan `asyncio.Queue` in-process (bukan message broker eksternal).
-2. **SQLite untuk dedup**: Ringan, embedded, dan persist tanpa dependency eksternal.
-3. **At-least-once simulation**: Publisher simulator mengirim ulang event untuk mensimulasikan duplikasi.
-4. **Ordering**: Menggunakan timestamp + monotonic sequence counter. Total ordering tidak dijamin antar topics.
-5. **Tidak ada external service**: Semua berjalan lokal dalam container.
+## Konteks Akademik
+Proyek ini dikembangkan sebagai Ujian Tengah Semester (UTS) mata kuliah Sistem Paralel dan Terdistribusi, Program Studi Informatika, Institut Teknologi Kalimantan.
